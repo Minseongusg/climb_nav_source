@@ -1,0 +1,70 @@
+<launch>
+
+  <arg name="pointcloud_topics" default="[/camera/depth/color/points]"/>
+
+  <arg name="fcu_url" default="/dev/ttyUSB0:921600"/>
+  <arg name="gcs_url" default="" />   <!-- GCS link is provided by SITL -->
+
+  <!-- Launch PX4 and mavros -->
+  <include file="$(find avoidance)/launch/avoidance_real_mavros.launch" >
+    <arg name="fcu_url" value="$(arg fcu_url)"/>
+    <arg name="gcs_url" value="$(arg gcs_url)" />   <!-- GCS link is provided by SITL -->
+    <arg name="pointcloud_topics" value="$(arg pointcloud_topics)"/>
+  </include>
+
+  <!-- Load custom console configuration -->
+  <env name="ROSCONSOLE_CONFIG_FILE" value="$(find local_planner)/resource/custom_rosconsole.conf"/>
+
+  <!-- Launch local planner -->
+  <node name="local_planner_node" pkg="local_planner" type="local_planner_node" output="screen" >
+    <param name="goal_x_param" value="15" />
+    <param name="goal_y_param" value="15"/>
+    <param name="goal_z_param" value="4" />
+    <rosparam param="pointcloud_topics" subst_value="True">$(arg pointcloud_topics)</rosparam>
+  </node>
+
+
+  <!-- Launch realsense -->
+  <arg name="serial_no"             default=""/>
+  <arg name="json_file_path"        default="$(find local_planner)/resource/stereo_calib.json"/>
+  <arg name="namespace"                default="camera"/>
+
+  <group ns="$(arg namespace)">
+    <include file="$(find realsense2_camera)/launch/includes/nodelet.launch.xml">
+      <arg name="serial_no"         value="$(arg serial_no)"/>
+      <arg name="json_file_path"    value="$(arg json_file_path)"/>
+      <arg name="depth_width"       value="640"/>
+      <arg name="depth_height"      value="480"/>
+      <arg name="depth_fps"         value="15"/>
+      <arg name="color_width"       value="640"/>
+      <arg name="color_height"      value="480"/>
+      <arg name="color_fps"         value="15"/>
+      <arg name="enable_depth"      value="true"/>
+      <arg name="enable_color"      value="true"/>
+      <arg name="enable_infra1"     value="true"/>
+      <arg name="enable_infra2"     value="false"/>
+      <arg name="enable_fisheye"    value="false"/>
+      <arg name="enable_gyro"       value="false"/>
+      <arg name="enable_accel"      value="false"/>
+      <arg name="enable_pointcloud" value="true"/>
+      <arg name="enable_sync"       value="false"/>
+      <arg name="tf_prefix"         value="$(arg namespace)"/>
+    </include>
+
+  </group>
+
+  <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(find local_planner)/resource/local_planner.rviz" />
+
+  <!-- rosrun topic_tools transform /stereo/disparity /stereo/disparity_image sensor_msgs/Image 'm.image' -->
+
+  <!-- rosrun topic_tools transform /stereoV/disparity /stereoV/disparity_image sensor_msgs/Image 'm.image' -->
+
+  <!--  <node name="transform" pkg="topic_tools" type="transform"
+      args="/stereo/disparity /stereo/disparity_image sensor_msgs/Image 'm.image'" />
+
+       <node name="transformV" pkg="topic_tools" type="transform"
+      args="/stereoV/disparity /stereoV/disparity_image sensor_msgs/Image 'm.image'" /> -->
+
+
+</launch>
+
